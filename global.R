@@ -95,9 +95,9 @@ ReadGVCF <- function(path_to_gVCF,ref_genome=ref_genome,param = param){
     GT <- as.data.table(GT)
     AD <- as.data.table(AD)
     merged <- cbind(GT ,AD)
-    anno <- data.table(CHROM,POS,REF,ALT)
+    anno <- data.table(CHROM,POS,ID=".",REF,ALT)
     anno <- cbind(anno,merged)
     return(anno)
 }
 
-
+hdr <- VariantAnnotation::scanVcfHeader(path_to_gVCF)

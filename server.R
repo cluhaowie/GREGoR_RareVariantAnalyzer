@@ -20,6 +20,7 @@ server <- function(input, output,session) {
         #req(!is.null(values$snp_gvcf_file_path))
         str <- stringr::str_trim(input$goto_reg)
         str <- strsplit(str,":|-|_")
+        x <- vector()
         if (length(str[[1]]) == 1) {
             showNotification("Looking up gene name", type = "message")
             path <- "./data/"
@@ -53,16 +54,19 @@ server <- function(input, output,session) {
             to <- as.numeric(str[[1]][3])
             x <- c(from, to)
         }
-        w$show()
-        range.gr <- GenomicRanges::GRanges(chr,ranges = IRanges(x[1],x[2]))
-        values$snp_gvcf_table <- ReadGVCF(values$snp_gvcf_file_path,ref_genome=input$ref,param = range.gr)%>%
-            as.data.frame()
-        w$hide()
-    }, ignoreInit = T)
+        if(length(x)!=0&length(values$snp_gvcf_file_path)!=0){
+            range.gr <- GenomicRanges::GRanges(chr,ranges = IRanges(x[1],x[2]))
+            w$show()
+            values$snp_gvcf_table <- ReadGVCF(values$snp_gvcf_file_path,ref_genome=input$ref,param = range.gr)%>%
+                as.data.frame()
+            w$hide()
+        }
+
+    }, ignoreInit = F)
 
     ##output table
     output$filter_snv_table <- renderDataTable({
-        #req(nrow(values$snp_gvcf_table) != 0)
+        req(nrow(values$snp_gvcf_table) != 0)
         values$snp_gvcf_table
     },extensions=c("Responsive","Buttons"),
     server = T,
