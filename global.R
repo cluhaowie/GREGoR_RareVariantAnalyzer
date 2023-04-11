@@ -100,4 +100,4 @@ ReadGVCF <- function(path_to_gVCF,ref_genome=ref_genome,param = param){
     return(anno)
 }
 
-hdr <- VariantAnnotation::scanVcfHeader(path_to_gVCF)
+
