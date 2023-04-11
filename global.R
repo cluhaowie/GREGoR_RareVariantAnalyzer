@@ -11,7 +11,7 @@ library(DT)
 # for file processing
 library(VariantAnnotation)
 # Install missing packages from CRAN, 'arrow' may be a problem
-list.of.packages <- c("dplyr", "data.table", "shiny", "shinydashboard",
+list.of.packages <- c("dplyr", "data.table", "shiny", "shinydashboard","bs4Dash",
                       "tippy","DT","ggplot2","shinyWidgets","shinyFiles","waiter",
                       "BiocManager","arrow","shinydashboardPlus","bs4Dash", "colourpicker")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
