@@ -14,6 +14,15 @@ server <- function(input, output,session) {
     # matching ui module
     mod_snp_upload_Server("snv",volumes=volumes,values)
 
+    # select reference
+    observeEvent(input$ref,{
+        if(input$ref=="hg38"){
+            values$p1_file <-  "hg38_MANE.v1.0.refseq.parquet"
+        }else if(input$ref=="hg19"){
+            values$p1_file <-  "NCBI_RefSeq_hg19_clean.bed.parquet"
+        }
+    })
+
     ## btn_goto
     observeEvent(input$btn_go,{
         req(!is.null(input$goto_reg))
@@ -24,7 +33,7 @@ server <- function(input, output,session) {
         if (length(str[[1]]) == 1) {
             showNotification("Looking up gene name", type = "message")
             path <- "./data/"
-            p1_file <- "MANE.GRCh38.v1.0.refseq.gz.parquet"
+            p1_file <- values$p1_file
             RefSeq <- arrow::read_parquet(paste0(path,p1_file),as_data_frame = F)
             search <- as.character(str[[1]])
             snp_gvcf_file_path=values$snp_gvcf_file_path
@@ -55,6 +64,13 @@ server <- function(input, output,session) {
             x <- c(from, to)
         }
         if(length(x)!=0&length(values$snp_gvcf_file_path)!=0){
+            if(!chr%in%values$snp_gvcf_file_ref){
+                if(chr%in%chrom_id){
+                    chr <- names(chrom_id)[which(chrom_id==chr)]
+                }else{
+                    chr <- chrom_id[which(names(chrom_id)==chr)]
+                }
+            }
             range.gr <- GenomicRanges::GRanges(chr,ranges = IRanges(x[1],x[2]))
             w$show()
             values$snp_gvcf_table <- ReadGVCF(values$snp_gvcf_file_path,ref_genome=input$ref,param = range.gr)%>%

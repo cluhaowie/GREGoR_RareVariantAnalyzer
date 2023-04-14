@@ -99,5 +99,6 @@ ReadGVCF <- function(path_to_gVCF,ref_genome=ref_genome,param = param){
     anno <- cbind(anno,merged)
     return(anno)
 }
-
+chrom_id <- c(1:22,"X")
+names(chrom_id) <- paste0("chr",chrom_id)
 

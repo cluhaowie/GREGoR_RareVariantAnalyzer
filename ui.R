@@ -11,7 +11,7 @@ ui <- dashboardPage(
                 fluidRow(
                     column(width=12,
                            box(title="Step 0: File import/upload",status="primary",width = 12,solidHeader = T,collapsible = T,
-                               radioButtons(inputId = "ref",label = h3("Reference Genome Build"),choices = list("GRCh37"="GRCh37","GRCh38"="GRCh38"),inline = T,selected = "GRCh38"),
+                               radioButtons(inputId = "ref",label = h3("Reference Genome Build"),choices = list("hg19"="hg19","GRCh38"="hg38"),inline = T,selected = "GRCh38"),
                                h5("Upload or select snv vcf file",dashboardBadge("required", color = "primary")),
                                mod_snp_upload_UI("snv")
                                )
