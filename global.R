@@ -28,7 +28,7 @@ options(timeout = 6000)
 options(shiny.maxRequestSize=3*1024^3) ## max file size 3 Gb
 options(shiny.autoreload=TRUE)
 
-geneExtend <- 1e5 # window size extend to 100kb
+#geneExtend <- 1e5 # window size extend to 100kb
 
 # use the module for file upload
 
@@ -53,25 +53,41 @@ mod_snp_upload_Server <- function(id,volumes,values) {
         function(input, output, session) {
             shinyFileChoose(input, "local_snp_file", roots = volumes, session=session)
             observeEvent(input$file, {
-                Rsamtools::indexTabix(input$file$datapath,format = "vcf")
-                values[["snp_gvcf_file_ref"]] <- VariantAnnotation::scanVcfHeader(input$file$datapath)@reference
-                values[["snp_gvcf_file_path"]] <- input$file$datapath
+                if(input$file$datapath%like%"vcf|vcf.gz"){
+                    Rsamtools::indexTabix(input$file$datapath,format = "vcf")
+                    values[["snp_gvcf_file_ref"]] <- VariantAnnotation::scanVcfHeader(input$file$datapath)@reference
+                    values[["snp_gvcf_file_path"]] <- input$file$datapath
+                    showModal(modalDialog(title = "File upload",
+                                          "The joint called SNP file has been uploaded and indexed"))
+                }
+                if(input$file$datapath%like%"csv|tsv|txt"){
+                    values[["snp_gvcf_table"]] <- data.table::fread(input$file$datapath,header = T,stringsAsFactors = F)
+                    values[["snp_gvcf_file_ref"]] <- names(chrom_id)
+                }
                 showModal(modalDialog(title = "File upload",
-                                      "The joint called SNP file has been uploaded and indexed"))
+                                      "The annotate tsv is loaded"))
             })
             observeEvent(input$local_snp_file,{
                 if(is.integer(input$local_snp_file)){
                     cat("no local snp file found \n")
                 }else{
                     local_snp_file <- parseFilePaths(volumes, input$local_snp_file)
-                    index.file <- paste0(local_snp_file$datapath,".tbi")
-                    values[["snp_gvcf_file_ref"]] <- VariantAnnotation::scanVcfHeader(local_snp_file$datapath)@reference
-                    values[["snp_gvcf_file_path"]] <-  local_snp_file$datapath
-                    if(!file.exists(index.file)){
-                        Rsamtools::indexTabix(local_snp_file$datapath,format = "vcf")
+                    if(local_snp_file$datapath%like%"vcf|vcf.gz"){
+                        index.file <- paste0(local_snp_file$datapath,".tbi")
+                        values[["snp_gvcf_file_ref"]] <- VariantAnnotation::scanVcfHeader(local_snp_file$datapath)@reference
+                        values[["snp_gvcf_file_path"]] <-  local_snp_file$datapath
+                        if(!file.exists(index.file)){
+                            Rsamtools::indexTabix(local_snp_file$datapath,format = "vcf")
+                        }
+                        showModal(modalDialog(title = "File upload",
+                                              paste0("The joint called SNP file has been indexed")))
+                    }else{
+                        values[["snp_gvcf_table"]] <- data.table::fread(local_snp_file$datapath,header = T,stringsAsFactors = F)
+                        values[["snp_gvcf_file_ref"]] <- names(chrom_id)
+                        showModal(modalDialog(title = "File upload",
+                                              paste0("The annotate tsv is loaded")))
                     }
-                    showModal(modalDialog(title = "File upload",
-                                          paste0("The joint called SNP file has been indexed")))
+
                 }
             },ignoreInit = T)
 

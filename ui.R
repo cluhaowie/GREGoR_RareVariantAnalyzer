@@ -23,7 +23,9 @@ ui <- dashboardPage(
                                fluidRow(
                                    column(4,shiny::textInput("goto_reg",label = NULL,placeholder = "gene symbol, chromosome location/range")),
                                    column(1,shiny::actionButton("btn_go","go"))
-                                   )
+                                   ),
+                               fluidRow(column(4,sliderInput("geneExtend", label = "Flanking Gene regions (bp)",
+                                                             min = 0,max = 1e6, value = 1e5,step=1000)))
 
                                )
 
