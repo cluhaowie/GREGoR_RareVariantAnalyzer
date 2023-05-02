@@ -1,137 +1,143 @@
 server <- function(input, output,session) {
-  ##preprocess; check credential
-  res_auth <- secure_server(
-    check_credentials = check_credentials(
-      "pw.sqlite",
-      passphrase = key_get("R-shinymanager-key", "testkey")
-      # passphrase = "passphrase_wihtout_keyring"
-    )
-  )
-  output$auth_output <- renderPrint({
-    reactiveValuesToList(res_auth)
-  })
-  
-  
-  output$tab1UI <- renderUI({
-    tagList(fluidRow(column(width = 12,
-                            fluidRow(box( title = "Sample information", status = "primary", width = 12, solidHeader = T, collapsible = T,
-                                          fluidRow(column(4,
-                                                          p(
-                                                            HTML("<b>PhenoDB sample ID</b>"), span(shiny::icon("info-circle"), id = "info_bh_id"), textInput(inputId="BH_id",label = NULL),
-                                                            tippy::tippy_this(elementId = "info_bh_id", tooltip = "e.g.,BH11001-1", placement = "right")
-                                                          )),
-                                                   column(4,
-                                                          p(
-                                                            HTML("<b>Internal sample ID</b>"), 
-                                                            span(shiny::icon("info-circle"), id = "info_alter_id"), textInput(inputId="BAB_id",label = NULL),
-                                                            tippy::tippy_this(elementId = "info_alter_id", tooltip = "e.g.,BAB or internal id", placement = "right"))),
-                                                   column(4,
-                                                          p(
-                                                            HTML("<b>Requester email</b>"), 
-                                                            span(shiny::icon("info-circle"), id = "info_email_id"), textInput(inputId="email_address",label = NULL),
-                                                            tippy::tippy_this(elementId = "info_email_id", tooltip = "Email address", placement = "right")))),
-                                          fluidRow(column(4,
-                                                          p(HTML("<b>Data type</b>"), span(shiny::icon("info-circle"), id = "info_seq_id"), selectInput(inputId = "seq_id",label = NULL,
-                                                                                                                                                        c("Genome Sequencing"="wgs","Clinical Exome Sequencing"="wes"),selected = "wes"),
-                                                            tippy::tippy_this(elementId = "info_seq_id", tooltip = "e.g.,WES or WGS", placement = "right"))),
-                                                   column(4,
-                                                          p(HTML("<b>Clinical Lab</b>"), span(shiny::icon("info-circle"), id = "info_lab_id"), textInput(inputId = "lab_id",label = NULL,placeholder = "Baylor Genetics"),
-                                                            tippy::tippy_this(elementId = "info_lab_id", tooltip = "e.g.,BG,GeneDx", placement = "right"))),
-                                                   column(4,
-                                                          p(
-                                                            HTML("<b>Prefered reference genome to map</b>"), span(shiny::icon("info-circle"), id = "info_ref_id"),selectInput(inputId = "ref_id",label = NULL,
-                                                                                                                                                                              c("GRCh38"="hg38","GRCh37"="hg19"),selected = "hg19"),
-                                                            tippy::tippy_this(elementId = "info_ref_id", tooltip = "version of reference mapped", placement = "right")
-                                                          ))),
-                                          fluidRow(column(4,fileInput("batch_tbl",label = "Batch upload",accept=c("*.csv"),multiple = F,buttonLabel = "Browse..."))),
-                                          fluidRow(column(2,actionButton("btn_validate", "Validate Record")),
-                                                   column(2,actionButton("btn_insert", "Insert Record"))))))),
-            fluidRow(column(12,
-                            fluidRow(box(title = "Sample in database", status = "success", width = 12, solidHeader = T, collapsible = T,
-                                         DT::dataTableOutput("sample_meta_tbl")
-                                         ))))
-            )
-    
-  })
-  output$tab2UI <- renderUI({
-    fluidRow(
-      column(width = 12,
-             fluidRow(
-               box(
-                 title = "Filter parameters", status = "primary", width = 12, solidHeader = T, collapsible = T,
-                 fluidRow(
-                   column(
-                     6,
-                     p(
-                       HTML("<b>Gene</b>"), span(shiny::icon("info-circle"), id = "info_gene"), textInput("gene",label=NULL),
-                       tippy::tippy_this(elementId = "info_gene", tooltip = "Selected gene", placement = "right")
-                     )
-                   )
-                 ),
-                 fluidRow(
-                   useWaiter(),
-                   column(2, actionButton("btn_filter", "Filter"))
-                 )
-               )
-             )),
-      column(width = 12,
-             fluidRow(
-               box(
-                 title = "Table", width = 12, solidHeader = T, status = "success", collapsible = T,
-                 DT::dataTableOutput("gene_variant_table")))))
-    })
-  
-  # Reavtive Values --------------------------
-  values <- reactiveValues()
-  
-  values$data <- data.frame(stringsAsFactors = F)
-  values$work_data <- data.frame(stringsAsFactors = F)
-  values$meta_tbl <- sample_metatable
-  # Tab1
-  output$sample_meta_tbl <- DT::renderDataTable({
-    values$meta_tbl
-  },
-  extensions=c("Responsive","Buttons"),
-  server = T,filter = list(position = 'top', clear = T),
-  options = list(dom = 'Bfrtip',
-                 buttons = list(list(extend = "csv",text="Download Current Page",filename = input$gene,
-                                     exportOptions = list(
-                                       modifier = list(page = "current")
-                                     )),
-                                list(extend = "csv",text="Download Full Result",filename = input$gene,
-                                     exportOptions = list(
-                                       modifier = list(page = "all")
-                                     )))))
-  
-  # Tab2
-  # button to filter range---------
-  observeEvent(input$btn_filter,{
-    gene <- input$gene
-    values$work_data <- data%>%
-      filter(Gene.refGene==gene)%>%
-      collect()
-    selectkey <- values$work_data$key
-    values$work_data <- tbl(conn,"hg19_WES_allele_tbl")%>%
-      filter(key%in%selectkey)%>%
-      collect()%>%merge(.,values$work_data,by="key")
-  })
-  output$gene_variant_table <- DT::renderDataTable({ 
-    values$work_data
-  },
-  extensions=c("Responsive","Buttons"),
-  server = T,filter = list(position = 'top', clear = T),
-  options = list(dom = 'Bfrtip',
-                 buttons = list(list(extend = "csv",text="Download Current Page",filename = input$gene,
-                                     exportOptions = list(
-                                       modifier = list(page = "current")
-                                     )),
-                                list(extend = "csv",text="Download Full Result",filename = input$gene,
-                                     exportOptions = list(
-                                       modifier = list(page = "all")
-                                     ))
-                                )))
-  
-  
+    # Reavtive Values --------------------------
+    values <- reactiveValues()
+    values$snp_gvcf_file_ref <- vector()
+    values$snp_gvcf_file_path <- vector()
+    values$snp_gvcf_table <- data.frame(stringsAsFactors = F)
+    ranges <- reactiveValues(x = NULL, y = NULL, chr = NULL)
 
-  
+    volumes <- c(Home="~/Downloads/","R installation" = R.home(),shinyFiles::getVolumes()())
+
+    w <- waiter::Waiter$new(html = spin_3(),
+                            color = transparent(.5))
+
+    # matching ui module
+    mod_snp_upload_Server("snv",volumes=volumes,values)
+
+    # select reference
+    observeEvent(input$ref,{
+        if(input$ref=="hg38"){
+            values$p1_file <-  "MANE.GRCh38.v1.0.refseq.gz.parquet"
+        }else if(input$ref=="hg19"){
+            values$p1_file <-  "NCBI_RefSeq_hg19_clean.bed.parquet"
+        }
+    })
+
+    ## btn_goto
+    observeEvent(input$btn_go,{
+        req(!is.null(input$goto_reg))
+        geneExtend <- input$geneExtend
+        #req(!is.null(values$snp_gvcf_file_path))
+        #browser()
+        str <- stringr::str_trim(input$goto_reg)
+        str <- strsplit(str,":|-|_")
+        x <- vector()
+        if (length(str[[1]]) == 1) {
+            showNotification("Looking up gene name", type = "message")
+            search <- as.character(unlist(strsplit(str[[1]],";|,")))
+            path <- "./data/"
+            p1_file <- values$p1_file
+            RefSeq <- arrow::read_parquet(paste0(path,p1_file),as_data_frame = F)
+            #search <- as.character(str[[1]])
+            snp_gvcf_file_path=values$snp_gvcf_file_path
+            ref_genome <- input$ref
+            browser()
+            found <- RefSeq %>%
+                filter(gene_id%in%search)%>%collect()
+            if (nrow(found) != 0){
+                gene.list <- split.data.frame(found,f=as.factor(found$gene_id))
+            }else{
+                showNotification("Gene not found", type = "error")
+            }
+        }
+        else if (length(str[[1]]) == 2){
+            showNotification("Jumping to coordinates", type = "message")
+            chr <- as.character(str[[1]][1])
+            from <- as.numeric(str[[1]][2])-500000
+            if (from < 0){from <- 0}
+            to <- as.numeric(str[[1]][2])+500000
+            x <- c(from, to)
+        }
+        else if (length(str[[1]]) == 3){
+            showNotification("Jumping to coordinates", type = "message")
+            chr <- as.character(str[[1]][1])
+            from <- as.numeric(str[[1]][2])
+            to <- as.numeric(str[[1]][3])
+            x <- c(from, to)
+        }
+        if(length(x)!=0&length(values$snp_gvcf_file_path)!=0){
+            if(!chr%in%values$snp_gvcf_file_ref){
+                if(chr%in%chrom_id){
+                    chr <- names(chrom_id)[which(chrom_id==chr)]
+                }else{
+                    chr <- chrom_id[which(names(chrom_id)==chr)]
+                }
+            }
+            range.gr <- GenomicRanges::GRanges(chr,ranges = IRanges(x[1],x[2]))
+            w$show()
+            browser()
+            values$snp_gvcf_table_filter <- ReadGVCF(values$snp_gvcf_file_path,ref_genome=input$ref,param = range.gr)%>%
+                as.data.frame()
+            w$hide()
+
+        }
+        if(length(x)!=0&nrow(values$snp_gvcf_table)!=0){
+            if(!chr%in%values$snp_gvcf_file_ref){
+                if(chr%in%chrom_id){
+                    chr <- names(chrom_id)[which(chrom_id==chr)]
+                }else{
+                    chr <- chrom_id[which(names(chrom_id)==chr)]
+                }
+            }
+            w$show()
+            #browser()
+            values$snp_gvcf_table_filter <- values$snp_gvcf_table%>%
+                filter(Chr%in%chr,Start>x[1],Start<x[2])
+            w$hide()
+        }
+        if(length(gene.list)!=0&nrow(values$snp_gvcf_table)!=0){
+            w$show()
+            values$snp_gvcf_table_filter <- rbindlist(lapply(gene.list,function(x){
+                    chr <- as.character(unique(found$seqname))
+                    gene_range <- c(as.numeric(min(x$start)-geneExtend),
+                                    as.numeric(max(x$end)+geneExtend))
+                    values$snp_gvcf_table%>%
+                        filter(Chr%in%chr,Start>gene_range[1],Start<gene_range[2])
+                }))
+            w$hide()
+        }
+        if(length(gene.list)!=0&length(values$snp_gvcf_file_path)!=0){
+            w$show()
+            values$snp_gvcf_table_filter <- rbindlist(lapply(gene.list,function(x){
+                chr <- as.character(unique(found$seqname))
+                if(!chr%in%values$snp_gvcf_file_ref){
+                    if(chr%in%chrom_id){
+                        chr <- names(chrom_id)[which(chrom_id==chr)]
+                    }else{
+                        chr <- chrom_id[which(names(chrom_id)==chr)]
+                    }
+                }
+
+                range.gr <- GenomicRanges::GRanges(chr,ranges = IRanges(as.numeric(min(x$start)-geneExtend),
+                                                                        as.numeric(max(x$end)+geneExtend)))
+                values$snp_gvcf_table <- ReadGVCF(values$snp_gvcf_file_path,ref_genome=input$ref,param = range.gr)%>%
+                    as.data.frame()
+            }))
+            w$hide()
+        }
+
+
+    }, ignoreInit = F)
+
+    ##output table
+    output$filter_snv_table <- renderDataTable({
+        req(nrow(values$snp_gvcf_table_filter) != 0)
+        values$snp_gvcf_table_filter
+    },extensions=c("Responsive","Buttons"),
+    server = T,
+    editable = TRUE,
+    filter = list(position = 'top', clear = T),
+    options = list(dom = 'Bfrtip',buttons = c('tsv','csv','excel')))
+
+
 }
