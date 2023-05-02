@@ -41,7 +41,6 @@ server <- function(input, output,session) {
             #search <- as.character(str[[1]])
             snp_gvcf_file_path=values$snp_gvcf_file_path
             ref_genome <- input$ref
-            browser()
             found <- RefSeq %>%
                 filter(gene_id%in%search)%>%collect()
             if (nrow(found) != 0){
