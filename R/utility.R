@@ -21,12 +21,7 @@ get_spliceai_result <- function(variant_position) {
 
     # Send the GET request
     response <- GET(base_url, query = query_params)
-    # Define the proxy settings
-    #proxy_url <- "https://64.225.8.82:9987"
-    #proxy_username <- "your_proxy_username"
-    #proxy_password <- "your_proxy_password"
-    # Configure the proxy settings
-    #httr::set_config(use_proxy(url = proxy_url,), override = TRUE)
+
     # Check if the request was successful
     if (status_code(response) != 200) {
         stop("Error: Request failed")
@@ -75,5 +70,4 @@ parse_spliceai_score <- function(input_string) {
 
     return(result)
 }
-input_string <- "TRAPPC9---ENSG00000167632.18---ENST00000438773.4---yes---protein_coding---NM_001160372.4,NM_001374682.1,NM_001374683.1,NM_001374684.1|0.04|0.83|0.00|0.62|-32|-2|66|-147|0.01|0.06|0.83|0.00|0.00|0.00|0.91|0.30"
-parsed_string <- parse_spliceai_result (input_string)
+
