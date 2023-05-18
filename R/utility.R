@@ -2,14 +2,13 @@ require(urltools)
 require(httr)
 require(jsonlite)
 # validate url, if true return data.frame, or a vector of FALSE
-validate_url <- function(url){
+validate_url <- function(url) {
     tryCatch({
         result <- url_parse(url)
         return(result)
-    },error=function(e){
+    }, error = function(e) {
         return(FALSE)
-    }
-    )
+    })
 }
 
 get_spliceai_result <- function(variant_position) {
